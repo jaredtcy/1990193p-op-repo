@@ -1,0 +1,20 @@
+#!/bin/bash
+# This script is executed by Bolt on the target container
+
+# 1. Ensure apache2 is installed & running
+puppet resource package apache2 ensure=installed
+puppet resource service apache2 ensure=running enable=true
+
+# 2. Clean up /operate/1990193p
+puppet resource file /operate/1990193p ensure=absent
+puppet resource file /operate/1990193p ensure=directory
+
+# 3. Clone the repo
+cd /operate/1990193p
+git clone https://github.com/<your account>/1990193p-op-repo.git .
+
+# 4. Replace index.html
+cp index-op-1990193p.html /var/www/html/index.html
+
+# 5. Restart apache
+puppet resource service apache2 ensure=running
