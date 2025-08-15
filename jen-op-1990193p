@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+    triggers { pollSCM('*/2 * * * *') }
+    stages {
+        
+        stage('Op-1990193p-S1') {
+            steps {
+                sh 'docker rmi -f qa-bkup-image || true'
+                sh 'docker commit 1990193p-qa-svr qa-bkup-image'
+                sh "bolt script run './1990193p_script' -t 1990193p-qa-svr"
+                echo 'Op-S1-1990193p: QA web server is backup and updated'
+            }
+        }
+
+        stage('Op-1990193p-S2') {
+            steps {
+                sh 'curl -f http://<QA_SERVER_IP>:<port>/index.html'
+                echo 'Op-1990193p-S2: Checking on whether QA server is running after update'
+            }
+        }
+
+        stage('Op-1990193p-S3') {
+            steps {
+                script {
+                    def userChoice = input message: 'QA check result', parameters: [choice(choices: ['Proceed', 'Rollback'], description: 'Proceed to Prod or Rollback QA?')]
+                    if (userChoice == 'Rollback') {
+                        sh 'docker rm -f 1990193p-qa-svr || true'
+                        sh 'docker run -d --name 1990193p-qa-svr qa-bkup-image'
+                        echo 'Op-1990193p-S3: QA server fails after update and is rolled back'
+                        error('Aborting')
+                    } else {
+                        echo 'Op-1990193p-S3: Proceed to roll out to Prod server'
+                    }
+                }
+            }
+        }
+
+        stage('Op-1990193p-S4') {
+            steps {
+                sh 'docker rmi -f prod-bkup-image || true'
+                sh 'docker commit 1990193p-prod-svr prod-bkup-image'
+                sh "bolt script run './1990193p_script' -t 1990193p-prod-svr"
+                echo 'Op-1990193p-S4: Prod web server is backup and updated'
+            }
+        }
+
+        stage('Op-1990193p-S5') {
+            steps {
+                sh 'curl -f http://<PROD_SERVER_IP>:<port>/index.html'
+                echo 'Op-1990193p-S5: Checking on whether Prod server is running after update'
+            }
+        }
+
+        stage('Op-1990193p-S6') {
+            steps {
+                script {
+                    def userChoice = input message: 'Prod check result', parameters: [choice(choices: ['Release', 'Rollback'], description: 'Release Prod or Rollback?')]
+                    if (userChoice == 'Rollback') {
+                        sh 'docker rm -f 1990193p-prod-svr || true'
+                        sh 'docker run -d --name 1990193p-prod-svr prod-bkup-image'
+                        echo 'Op-1990193p-S6: Prod web server is rolled back'
+                        error('Aborting')
+                    } else {
+                        echo 'Op-1990193p-S6: Proceed to release Prod web server to production'
+                    }
+                }
+            }
+        }
+
+        stage('Op-1990193p-S7') {
+            steps {
+                echo 'Op-1990193p-S7: Prod web server is monitored and ready to serve.'
+            }
+        }
+    }
+}
