@@ -10,7 +10,7 @@ puppet resource service apache2 ensure=running enable=true
 puppet resource file /operate/1990193p ensure=absent
 puppet resource file /operate/1990193p ensure=directory mode=0755
 
-# 3) Clone your repo into /operate/1990193p
+# 3) Clone your GitHub repo into /operate/1990193p
 cd /operate/1990193p
 if [ -d .git ]; then
   git fetch --all --prune
@@ -19,8 +19,8 @@ else
   git clone https://github.com/jaredtcy/1990193p-op-repo.git .
 fi
 
-# 4) Copy new index.html into apache webroot
+# 4) Copy new index.html into Apache webroot
 install -m 0644 index-op-1990193p.html /var/www/html/index.html
 
-# 5) Make sure apache is up (idempotent)
+# 5) Make sure Apache is up (idempotent)
 puppet resource service apache2 ensure=running enable=true
