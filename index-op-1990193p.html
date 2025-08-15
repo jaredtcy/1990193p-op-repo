@@ -23,8 +23,8 @@
     document.getElementById('ts').textContent = new Date().toLocaleString();
     const host = location.hostname;
     document.getElementById('server').textContent =
-      host === '192.168.100.110' ? 'QA (192.168.100.110)' :
-      host === '192.168.100.220' ? 'PROD (192.168.100.220)' : host;
+      host === '192.168.100.110' ? 'QA (192.168.100.110:33200)' :
+      host === '192.168.100.220' ? 'PROD (192.168.100.220:33500)' : host;
   </script>
 </body>
 </html>
