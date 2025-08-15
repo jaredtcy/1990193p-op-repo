@@ -1,11 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>DevOps Deployment Test</title>
+  <meta charset="utf-8" />
+  <title>DevOps Deployment Test - 1990193p</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
+    .card { max-width: 720px; border: 1px solid #eee; padding: 1.5rem; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+    h1 { margin-top: 0; }
+    code { background: #f6f8fa; padding: .2rem .4rem; border-radius: 6px; }
+  </style>
 </head>
 <body>
-    <h1>Welcome to QA/Prod Server Deployment - Jared Tan</h1>
-    <p>Polite ID: 1990193p</p>
-    <p>Deployment Time: <script>document.write(new Date().toLocaleString());</script></p>
+  <div class="card">
+    <h1>Deployed Successfully</h1>
+    <p>Polite ID: <strong>1990193p</strong></p>
+    <p>Server: <span id="server">Unknown</span></p>
+    <p>Deployed At: <span id="ts"></span></p>
+    <p>This file is <code>index-op-1990193p.html</code> from the Git repo.</p>
+  </div>
+  <script>
+    document.getElementById('ts').textContent = new Date().toLocaleString();
+    // Tiny helper so you can tell which server you’re hitting by IP:
+    const host = location.hostname;
+    document.getElementById('server').textContent =
+      host === '192.168.100.110' ? 'QA (192.168.100.110)' :
+      host === '192.168.100.220' ? 'PROD (192.168.100.220)' : host;
+  </script>
 </body>
 </html>
