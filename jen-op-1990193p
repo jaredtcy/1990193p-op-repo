@@ -10,8 +10,8 @@ pipeline {
     PROD_CONTAINER   = '1990193p-prod-svr'
     QA_BACKUP_IMG    = 'qa-bkup-image'
     PROD_BACKUP_IMG  = 'prod-bkup-image'
-    QA_URL           = 'http://192.168.100.110/index.html'
-    PROD_URL         = 'http://192.168.100.220/index.html'
+    QA_URL           = 'http://192.168.100.110:33200/index.html'
+    PROD_URL         = 'http://192.168.100.220:33500/index.html'
     BOLT_SCRIPT_PATH = './1990193p_script'
   }
 
@@ -48,7 +48,7 @@ pipeline {
           if (choice == 'Rollback') {
             sh """
               docker rm -f \$QA_CONTAINER || true
-              docker run -d --name \$QA_CONTAINER -p 8081:80 \$QA_BACKUP_IMG || true
+              docker run -d --name \$QA_CONTAINER -p 33200:80 \$QA_BACKUP_IMG
             """
             echo 'Op-1990193p-S3: QA server fails after update and is rolled back'
             error('Aborting')
@@ -89,7 +89,7 @@ pipeline {
           if (choice == 'Rollback') {
             sh """
               docker rm -f \$PROD_CONTAINER || true
-              docker run -d --name \$PROD_CONTAINER -p 8082:80 \$PROD_BACKUP_IMG || true
+              docker run -d --name \$PROD_CONTAINER -p 33500:80 \$PROD_BACKUP_IMG
             """
             echo 'Op-1990193p-S6: Prod web server is rolled back'
             error('Aborting')
