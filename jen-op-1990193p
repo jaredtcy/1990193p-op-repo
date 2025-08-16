@@ -20,14 +20,7 @@ pipeline {
                         docker rmi -f \$QA_BACKUP_IMG || true
                         docker commit \$QA_CONTAINER \$QA_BACKUP_IMG
 
-                        # Ensure target directory exists on QA server
-                        bolt command run "sudo mkdir -p /operate/1990193p && sudo chown \$BOLT_USER /operate/1990193p" \
-                            --targets \$QA_TARGET \
-                            --user \$BOLT_USER \
-                            --password \$BOLT_PASS \
-                            --no-host-key-check
-
-                        # Run deployment script on QA server
+                        # Run deployment script on QA server as root
                         bolt script run ./1990193p_script \
                             --targets \$QA_TARGET \
                             --user \$BOLT_USER \
@@ -42,10 +35,8 @@ pipeline {
 
         stage('Op-1990193p-S2: QA Health Check') {
             steps {
-                echo "Checking QA server is running..."
                 sh """
                     curl -I http://\$QA_TARGET:80 || { echo 'QA server not responding'; exit 1; }
-                    echo "QA server check complete"
                 """
             }
         }
@@ -56,9 +47,7 @@ pipeline {
                     def proceedToProd = input message: 'Proceed to Prod rollout?', ok: 'Yes', parameters: [
                         [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Proceed = true, Rollback QA = false', name: 'ProceedToProd']
                     ]
-                    if (proceedToProd) {
-                        echo "Proceeding to roll out to Prod server"
-                    } else {
+                    if (!proceedToProd) {
                         sh "docker run --rm --name \$QA_CONTAINER \$QA_BACKUP_IMG"
                         error("QA server rolled back. Aborting pipeline.")
                     }
@@ -69,19 +58,11 @@ pipeline {
         stage('Op-1990193p-S4: Prod Backup & Update') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'clientadm-creds', passwordVariable: 'BOLT_PASS', usernameVariable: 'BOLT_USER')]) {
-                    echo "Creating PROD backup & updating PROD with new index.html..."
                     sh """
                         docker rmi -f \$PROD_BACKUP_IMG || true
                         docker commit \$PROD_CONTAINER \$PROD_BACKUP_IMG
 
-                        # Ensure target directory exists on PROD server
-                        bolt command run "sudo mkdir -p /operate/1990193p && sudo chown \$BOLT_USER /operate/1990193p" \
-                            --targets \$PROD_TARGET \
-                            --user \$BOLT_USER \
-                            --password \$BOLT_PASS \
-                            --no-host-key-check
-
-                        # Run deployment script on PROD server
+                        # Run deployment script on PROD server as root
                         bolt script run ./1990193p_script \
                             --targets \$PROD_TARGET \
                             --user \$BOLT_USER \
@@ -96,10 +77,8 @@ pipeline {
 
         stage('Op-1990193p-S5: PROD Health Check') {
             steps {
-                echo "Checking PROD server is running..."
                 sh """
                     curl -I http://\$PROD_TARGET:80 || { echo 'PROD server not responding'; exit 1; }
-                    echo "PROD server check complete"
                 """
             }
         }
@@ -110,9 +89,7 @@ pipeline {
                     def proceedToRelease = input message: 'Release PROD to production?', ok: 'Yes', parameters: [
                         [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Proceed = true, Rollback PROD = false', name: 'ProceedToRelease']
                     ]
-                    if (proceedToRelease) {
-                        echo "Releasing PROD web server to production"
-                    } else {
+                    if (!proceedToRelease) {
                         sh "docker run --rm --name \$PROD_CONTAINER \$PROD_BACKUP_IMG"
                         error("PROD server rolled back. Aborting pipeline.")
                     }
