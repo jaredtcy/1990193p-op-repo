@@ -23,7 +23,7 @@ pipeline {
                             --user \$BOLT_USER \
                             --password \$BOLT_PASS \
                             --no-host-key-check \
-                            --sudo
+                            --run-as root
                         echo "Op-1990193p-S1: QA web server backup and update complete"
                     """
                 }
@@ -68,7 +68,7 @@ pipeline {
                             --user \$BOLT_USER \
                             --password \$BOLT_PASS \
                             --no-host-key-check \
-                            --sudo
+                            --run-as root
                         echo "Op-1990193p-S4: PROD web server backup and update complete"
                     """
                 }
