@@ -1,17 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+TARGET_DIR="/operate/1990193p"
+
+echo "=== Starting deployment script ==="
+
+# 0) Ensure parent directory exists
+mkdir -p /operate
+chown clientadm:clientadm /operate
+
 # 1) Ensure apache and git are installed & apache is running
 puppet resource package apache2 ensure=installed
 puppet resource package git     ensure=installed
 puppet resource service apache2 ensure=running enable=true
 
 # 2) Clean /operate/1990193p (remove then recreate)
-puppet resource file /operate/1990193p ensure=absent
-puppet resource file /operate/1990193p ensure=directory mode=0755
+puppet resource file "$TARGET_DIR" ensure=absent
+puppet resource file "$TARGET_DIR" ensure=directory mode=0755
 
 # 3) Clone your GitHub repo into /operate/1990193p
-cd /operate/1990193p
+cd "$TARGET_DIR"
 if [ -d .git ]; then
   git fetch --all --prune
   git reset --hard origin/main || git reset --hard origin/master || true
@@ -24,3 +32,5 @@ install -m 0644 index-op-1990193p.html /var/www/html/index.html
 
 # 5) Make sure Apache is up (idempotent)
 puppet resource service apache2 ensure=running enable=true
+
+echo "=== Deployment completed successfully ==="
