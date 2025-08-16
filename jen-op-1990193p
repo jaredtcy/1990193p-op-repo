@@ -18,8 +18,13 @@ pipeline {
                     sh """
                         docker rmi -f \$QA_BACKUP_IMG || true
                         docker commit \$QA_CONTAINER \$QA_BACKUP_IMG
-                        bolt script run ./1990193p_script --targets \$QA_TARGET --user \$BOLT_USER --password \$BOLT_PASS --no-host-key-check
-                        echo "Op-1990193p-S1: QA web server is backup and updated"
+                        bolt script run ./1990193p_script \
+                            --targets \$QA_TARGET \
+                            --user \$BOLT_USER \
+                            --password \$BOLT_PASS \
+                            --no-host-key-check \
+                            --sudo
+                        echo "Op-1990193p-S1: QA web server backup and update complete"
                     """
                 }
             }
@@ -41,11 +46,11 @@ pipeline {
                     def proceedToProd = input message: 'Proceed to Prod rollout?', ok: 'Yes', parameters: [
                         [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Proceed = true, Rollback QA = false', name: 'ProceedToProd']
                     ]
-                    if (!proceedToProd) {
+                    if (proceedToProd) {
+                        echo "Op-1990193p-S3: Proceeding to Prod rollout"
+                    } else {
                         sh "docker run --rm --name \$QA_CONTAINER \$QA_BACKUP_IMG"
                         error("Op-1990193p-S3: QA server rolled back. Aborting pipeline.")
-                    } else {
-                        echo "Op-1990193p-S3: Proceed to roll out to Prod server"
                     }
                 }
             }
@@ -58,8 +63,13 @@ pipeline {
                     sh """
                         docker rmi -f \$PROD_BACKUP_IMG || true
                         docker commit \$PROD_CONTAINER \$PROD_BACKUP_IMG
-                        bolt script run ./1990193p_script --targets \$PROD_TARGET --user \$BOLT_USER --password \$BOLT_PASS --no-host-key-check
-                        echo "Op-1990193p-S4: PROD web server is backup and updated"
+                        bolt script run ./1990193p_script \
+                            --targets \$PROD_TARGET \
+                            --user \$BOLT_USER \
+                            --password \$BOLT_PASS \
+                            --no-host-key-check \
+                            --sudo
+                        echo "Op-1990193p-S4: PROD web server backup and update complete"
                     """
                 }
             }
@@ -81,11 +91,11 @@ pipeline {
                     def proceedToRelease = input message: 'Release PROD to production?', ok: 'Yes', parameters: [
                         [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Proceed = true, Rollback PROD = false', name: 'ProceedToRelease']
                     ]
-                    if (!proceedToRelease) {
+                    if (proceedToRelease) {
+                        echo "Op-1990193p-S6: PROD server released to production"
+                    } else {
                         sh "docker run --rm --name \$PROD_CONTAINER \$PROD_BACKUP_IMG"
                         error("Op-1990193p-S6: PROD server rolled back. Aborting pipeline.")
-                    } else {
-                        echo "Op-1990193p-S6: Proceed to release PROD web server to production"
                     }
                 }
             }
