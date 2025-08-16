@@ -11,100 +11,120 @@ pipeline {
         PROD_TARGET = '192.168.100.220'
     }
     stages {
-        stage('Op-1990193p-S1') {
+
+        stage('Op-1990193p-S1: QA Backup & Update') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'clientadm-creds', passwordVariable: 'BOLT_PASS', usernameVariable: 'BOLT_USER')]) {
                     echo "Creating QA backup & updating QA with new index.html..."
                     sh """
                         docker rmi -f \$QA_BACKUP_IMG || true
                         docker commit \$QA_CONTAINER \$QA_BACKUP_IMG
+
+                        # Ensure target directory exists on QA server
+                        bolt command run "sudo mkdir -p /operate/1990193p && sudo chown \$BOLT_USER /operate/1990193p" \
+                            --targets \$QA_TARGET \
+                            --user \$BOLT_USER \
+                            --password \$BOLT_PASS \
+                            --no-host-key-check
+
+                        # Run deployment script on QA server
                         bolt script run ./1990193p_script \
                             --targets \$QA_TARGET \
                             --user \$BOLT_USER \
                             --password \$BOLT_PASS \
                             --no-host-key-check \
                             --run-as root
-                        echo "Op-1990193p-S1: QA web server backup and update complete"
+                        echo "QA web server backup and update complete"
                     """
                 }
             }
         }
 
-        stage('Op-1990193p-S2') {
+        stage('Op-1990193p-S2: QA Health Check') {
             steps {
                 echo "Checking QA server is running..."
                 sh """
                     curl -I http://\$QA_TARGET:80 || { echo 'QA server not responding'; exit 1; }
-                    echo "Op-1990193p-S2: QA server check complete"
+                    echo "QA server check complete"
                 """
             }
         }
 
-        stage('Op-1990193p-S3') {
+        stage('Op-1990193p-S3: QA Approval to Prod') {
             steps {
                 script {
                     def proceedToProd = input message: 'Proceed to Prod rollout?', ok: 'Yes', parameters: [
                         [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Proceed = true, Rollback QA = false', name: 'ProceedToProd']
                     ]
                     if (proceedToProd) {
-                        echo "Op-1990193p-S3: Proceeding to Prod rollout"
+                        echo "Proceeding to roll out to Prod server"
                     } else {
                         sh "docker run --rm --name \$QA_CONTAINER \$QA_BACKUP_IMG"
-                        error("Op-1990193p-S3: QA server rolled back. Aborting pipeline.")
+                        error("QA server rolled back. Aborting pipeline.")
                     }
                 }
             }
         }
 
-        stage('Op-1990193p-S4') {
+        stage('Op-1990193p-S4: Prod Backup & Update') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'clientadm-creds', passwordVariable: 'BOLT_PASS', usernameVariable: 'BOLT_USER')]) {
                     echo "Creating PROD backup & updating PROD with new index.html..."
                     sh """
                         docker rmi -f \$PROD_BACKUP_IMG || true
                         docker commit \$PROD_CONTAINER \$PROD_BACKUP_IMG
+
+                        # Ensure target directory exists on PROD server
+                        bolt command run "sudo mkdir -p /operate/1990193p && sudo chown \$BOLT_USER /operate/1990193p" \
+                            --targets \$PROD_TARGET \
+                            --user \$BOLT_USER \
+                            --password \$BOLT_PASS \
+                            --no-host-key-check
+
+                        # Run deployment script on PROD server
                         bolt script run ./1990193p_script \
                             --targets \$PROD_TARGET \
                             --user \$BOLT_USER \
                             --password \$BOLT_PASS \
                             --no-host-key-check \
                             --run-as root
-                        echo "Op-1990193p-S4: PROD web server backup and update complete"
+                        echo "PROD web server backup and update complete"
                     """
                 }
             }
         }
 
-        stage('Op-1990193p-S5') {
+        stage('Op-1990193p-S5: PROD Health Check') {
             steps {
                 echo "Checking PROD server is running..."
                 sh """
                     curl -I http://\$PROD_TARGET:80 || { echo 'PROD server not responding'; exit 1; }
-                    echo "Op-1990193p-S5: PROD server check complete"
+                    echo "PROD server check complete"
                 """
             }
         }
 
-        stage('Op-1990193p-S6') {
+        stage('Op-1990193p-S6: PROD Approval to Release') {
             steps {
                 script {
                     def proceedToRelease = input message: 'Release PROD to production?', ok: 'Yes', parameters: [
                         [$class: 'BooleanParameterDefinition', defaultValue: true, description: 'Proceed = true, Rollback PROD = false', name: 'ProceedToRelease']
                     ]
                     if (proceedToRelease) {
-                        echo "Op-1990193p-S6: PROD server released to production"
+                        echo "Releasing PROD web server to production"
                     } else {
                         sh "docker run --rm --name \$PROD_CONTAINER \$PROD_BACKUP_IMG"
-                        error("Op-1990193p-S6: PROD server rolled back. Aborting pipeline.")
+                        error("PROD server rolled back. Aborting pipeline.")
                     }
                 }
             }
         }
 
-        stage('Op-1990193p-S7') {
+        stage('Op-1990193p-S7: Monitoring & Ready') {
             steps {
-                echo "Op-1990193p-S7: PROD web server is monitored and ready to serve."
+                echo "PROD web server is monitored and ready to serve."
             }
         }
+
     }
 }
