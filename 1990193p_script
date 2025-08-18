@@ -18,7 +18,7 @@ puppet resource service apache2 ensure=running enable=true
 puppet resource file "$TARGET_DIR" ensure=absent
 puppet resource file "$TARGET_DIR" ensure=directory mode=0755
 
-# 3) Clone your GitHub repo into /operate/1990193p
+# 3) Clone GitHub repo into /operate/1990193p
 cd "$TARGET_DIR"
 if [ -d .git ]; then
   git fetch --all --prune
@@ -30,7 +30,7 @@ fi
 # 4) Copy new index.html into Apache webroot
 install -m 0644 index-op-1990193p.html /var/www/html/index.html
 
-# 5) Make sure Apache is up (idempotent)
+# 5) Making sure Apache is up 
 puppet resource service apache2 ensure=running enable=true
 
 echo "=== Deployment completed successfully ==="
